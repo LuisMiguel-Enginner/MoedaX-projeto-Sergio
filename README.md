@@ -2,6 +2,14 @@
 
 Plataforma de comparação e monitoramento de moedas e criptomoedas.
 
+## Integrantes
+
+- Luiz Felipe Kremer Dias - RA 272756
+- Eduardo Campovila Romano - RA 272804
+- Gustavo Henrique Da Silva Dos Reis - RA 272597
+- Kayke Macedo Rodrigues - RA 273350
+- Luis Miguel Gomes Oliveira - RA 272530
+
 ## Estrutura
 
 - `frontend/` — HTML, CSS e JavaScript (dashboard, login e cadastro).
