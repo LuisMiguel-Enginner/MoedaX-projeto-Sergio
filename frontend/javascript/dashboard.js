@@ -86,7 +86,6 @@ async function fetchMarketAssets() {
       const data = await response.json();
       if (data.assets?.length) return data.assets;
     } catch {
-      /* tenta a próxima fonte */
     }
   }
   return FALLBACK_MARKET_ASSETS;

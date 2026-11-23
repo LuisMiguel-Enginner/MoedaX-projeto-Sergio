@@ -8,7 +8,6 @@ async function loadSupabaseConfig() {
       if (config.url && config.anonKey) return config;
     }
   } catch {
-    /* XAMPP / arquivo estático — usa supabase-config.json */
   }
 
   const jsonUrl = new URL('../supabase-config.json', import.meta.url);

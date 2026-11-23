@@ -7,7 +7,6 @@ export async function requireAuth() {
     const user = await getCurrentUser();
     if (user) return user;
   } catch {
-    /* sem config ou erro de rede — trata como não autenticado */
   }
 
   const demoMode = localStorage.getItem('moedax_demo_mode') === '1';

@@ -47,7 +47,6 @@ export async function getCurrentUser() {
         profile = data;
       }
     } catch {
-      // Mantém o fluxo em modo resiliente quando o token da sessão é inválido ou a API responde 401.
     }
 
     const meta = session.user.user_metadata || {};
@@ -73,7 +72,6 @@ export async function signOut() {
     const supabase = await getSupabase();
     await supabase.auth.signOut();
   } catch {
-    // Sem sessão ativa, continua no fluxo demo local.
   }
   localStorage.removeItem('moedax_demo_name');
   localStorage.removeItem('moedax_demo_email');

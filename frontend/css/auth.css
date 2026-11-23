@@ -41,7 +41,7 @@ a:hover {
   color: var(--teal);
 }
 
-/* Header */
+
 .auth-header {
   display: flex;
   align-items: center;
@@ -102,7 +102,7 @@ a:hover {
   height: 40px;
 }
 
-/* Card */
+
 .auth-main {
   display: flex;
   align-items: center;
@@ -125,7 +125,7 @@ a:hover {
   min-height: 560px;
 }
 
-/* Painel esquerdo — construído (gradiente + conteúdo) */
+
 .auth-info {
   position: relative;
   display: flex;
@@ -233,7 +233,7 @@ a:hover {
   height: 48px;
 }
 
-/* Formulário */
+
 .auth-panel-form {
   display: flex;
   align-items: center;

@@ -5,7 +5,6 @@ const path = require('node:path');
 try {
   require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 } catch {
-  /* dotenv opcional até npm install */
 }
 
 const port = process.env.PORT || 3000;

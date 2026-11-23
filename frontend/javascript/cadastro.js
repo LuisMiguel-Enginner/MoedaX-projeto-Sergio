@@ -109,7 +109,6 @@ async function redirectIfLoggedIn() {
     const { data } = await supabase.auth.getSession();
     if (data.session) window.location.href = 'index.html';
   } catch {
-    /* config ausente */
   }
 }
 
