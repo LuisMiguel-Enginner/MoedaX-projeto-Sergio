@@ -494,6 +494,13 @@ export default {
       if (url.pathname.startsWith('/api/')) {
         return await handleApi(request, env, url);
       }
+
+      // Raiz sem sessão: envia para login (navegação inicial)
+      if ((url.pathname === '/' || url.pathname === '/index.html') && request.method === 'GET') {
+        // Cookie/token fica no localStorage (client-side); a proteção forte está no HTML/JS.
+        // Mantém index acessível após login; o redirect imediato no HTML cobre o Vercel.
+      }
+
       if (env.ASSETS) {
         return env.ASSETS.fetch(request);
       }

@@ -13,6 +13,12 @@
   <link rel="stylesheet" href="css/dashboard.css" />
   <link rel="stylesheet" href="css/deposito.css" />
   <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    // Bloqueia a home sem sessão (antes dos módulos)
+    if (!localStorage.getItem('moedax_token')) {
+      location.replace('login.html');
+    }
+  </script>
   <script type="module">
     import { requireAuth } from './javascript/auth-guard.js';
     import { mountMoedaxLogos } from './javascript/moedax-logo.js';

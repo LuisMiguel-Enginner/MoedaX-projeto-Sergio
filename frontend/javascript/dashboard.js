@@ -1,4 +1,5 @@
 import { getCurrentUser, signOut } from './session-user.js';
+import { apiUrl } from './auth-api.js';
 import { formatDemoBRL, getDemoAccount, initDepositControls, initNotificationButton } from './demo-account.js';
 
 const DEFAULT_PORTFOLIO = {};
@@ -79,7 +80,7 @@ function getUserFavoriteSymbols(userId, assets) {
 
 async function fetchMarketAssets() {
   try {
-    const response = await fetch('/api/assets');
+    const response = await fetch(apiUrl('/api/assets'));
     if (response.ok) {
       const data = await response.json();
       if (data.assets?.length) return data.assets;
@@ -92,7 +93,7 @@ async function fetchMarketAssets() {
 async function fetchAssetHistories(assets) {
   const results = await Promise.all(assets.map(async (asset) => {
     try {
-      const response = await fetch(`/api/history?symbol=${asset.symbol}&period=24h`);
+      const response = await fetch(apiUrl(`/api/history?symbol=${asset.symbol}&period=24h`));
       const data = await response.json();
       if (data.history?.length) return [asset.symbol, data.history];
     } catch { /* mantém a curva de fallback */ }

@@ -32,7 +32,8 @@ function assetIcon(asset) {
 
 async function loadAssets() {
   try {
-    const response = await fetch('/api/assets');
+    const { apiUrl } = await import('./auth-api.js');
+    const response = await fetch(apiUrl('/api/assets'));
     const data = await response.json();
     if (data.assets?.length) return data.assets;
   } catch { /* usa os valores locais quando a API estiver indisponível */ }

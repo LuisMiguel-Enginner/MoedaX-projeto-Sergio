@@ -1,14 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": null,
-  "functions": {
-    "api/index.js": {
-      "includeFiles": "_server/**",
-      "maxDuration": 30
-    },
-    "api/[...path].js": {
-      "includeFiles": "_server/**",
-      "maxDuration": 30
-    }
-  }
+  "redirects": [
+    { "source": "/", "destination": "/login.html", "permanent": false }
+  ]
 }

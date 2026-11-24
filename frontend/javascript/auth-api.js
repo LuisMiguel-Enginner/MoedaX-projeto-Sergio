@@ -1,5 +1,19 @@
 const TOKEN_KEY = 'moedax_token';
 
+// API Cloudflare (produção). Em workers.dev usa a mesma origem.
+export const API_BASE = (() => {
+  const host = typeof location !== 'undefined' ? location.hostname : '';
+  if (host.endsWith('.workers.dev')) return '';
+  if (host === 'localhost' || host === '127.0.0.1') return '';
+  return 'https://moedax.luismiguelgomesoliveira-014.workers.dev';
+})();
+
+export function apiUrl(path) {
+  if (/^https?:\/\//i.test(path)) return path;
+  const normalized = path.startsWith('/') ? path : `/${path}`;
+  return `${API_BASE}${normalized}`;
+}
+
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY);
 }
@@ -17,7 +31,7 @@ export function authHeaders(extra = {}) {
 }
 
 export async function api(path, options = {}) {
-  const response = await fetch(path, {
+  const response = await fetch(apiUrl(path), {
     ...options,
     headers: {
       ...authHeaders(),
