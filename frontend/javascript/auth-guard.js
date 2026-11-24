@@ -9,13 +9,6 @@ export async function requireAuth() {
   } catch {
   }
 
-  const demoMode = localStorage.getItem('moedax_demo_mode') === '1';
-  if (demoMode) {
-    localStorage.setItem('moedax_demo_name', 'Usuário Demo');
-    localStorage.setItem('moedax_demo_email', 'demo@moedax.test');
-    return { id: 'demo-user-1', email: 'demo@moedax.test' };
-  }
-
   window.location.replace(LOGIN_PATH);
   return new Promise(() => {});
 }

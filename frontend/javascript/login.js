@@ -1,4 +1,4 @@
-import { getSupabase, mapAuthError, showMessage, hideMessage } from './supabase-client.js';
+﻿import { getSupabase, mapAuthError, showMessage, hideMessage } from './supabase-client.js';
 
 const form = document.querySelector('#loginForm');
 const messageEl = document.querySelector('#authMessage');
@@ -29,13 +29,14 @@ async function handleLogin(event) {
   }
 
   submitBtn.disabled = true;
-  submitBtn.querySelector('span').textContent = 'Entrando…';
+  submitBtn.querySelector('span').textContent = 'EntrandoÔÇª';
 
   try {
     const supabase = await getSupabase();
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
 
+    localStorage.removeItem('moedax_demo_mode');
     if (remember) localStorage.setItem(rememberKey, email);
     else localStorage.removeItem(rememberKey);
 
@@ -55,7 +56,7 @@ async function handleGoogleLogin() {
     const redirectTo = new URL('index.html', window.location.href).href;
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo },
+      options: { redirectTo }
     });
     if (error) throw error;
   } catch (err) {
@@ -74,7 +75,7 @@ async function handleForgotPassword(event) {
   try {
     const supabase = await getSupabase();
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: new URL('login.html', window.location.href).href,
+      redirectTo: new URL('login.html', window.location.href).href
     });
     if (error) throw error;
     showMessage(messageEl, 'success', 'Enviamos um link de recuperação para o seu e-mail.');
@@ -100,7 +101,7 @@ function showRedirectError() {
   window.history.replaceState({}, document.title, window.location.pathname);
 }
 
-form.addEventListener('submit', handleLogin);
+form?.addEventListener('submit', handleLogin);
 document.querySelector('#googleLogin')?.addEventListener('click', handleGoogleLogin);
 document.querySelector('#forgotPassword')?.addEventListener('click', handleForgotPassword);
 

@@ -2,230 +2,227 @@
 
 ## 1. Visão geral
 
-O projeto disponibiliza atualmente um backend HTTP em Node.js e uma interface web em HTML/JavaScript e Angular.
-
-Esta documentação descreve as APIs que estão implementadas no código-fonte atual.
+Backend Node.js em camadas com SQLite, CRUD completo, autenticação HTTP Basic e regras de negócio.
 
 - Base URL local: `http://localhost:3000`
-- Formato das respostas: JSON
-- Execução: `npm start`
-- Arquivo do servidor: `backend/server.js`
-- Autenticação de usuários: Supabase Auth
-- Cotação externa de criptomoedas: CoinGecko
-- Cotação externa de moedas: ExchangeRate API
-- Histórico externo de criptomoedas: CoinGecko
-- Histórico externo de moedas: Frankfurter
+- Base URL Vercel: `https://SEU-PROJETO.vercel.app`
+- Formato: JSON
+- Execução local: `npm start`
+- Deploy: `vercel.json` serve `frontend/` + API serverless em `/api/*`
+- Banco: SQLite (`backend/db/moedax.db` local; `/tmp/moedax.db` na Vercel)
+- Diagrama de dados: `backend/docs/diagrama-dados.md`
+- Coleção Postman: `postman/MoedaX.postman_collection.json`
 
-## 2. Cotações e ativos
+### Arquitetura
 
-### 2.1 Listar ativos
+```text
+routes → middleware (auth/erros) → controllers → services → repositories → SQLite
+```
+
+### Autenticação
+
+Endpoints protegidos exigem **HTTP Basic Auth**:
+
+```http
+Authorization: Basic base64(email:senha)
+```
+
+Usuários seed (criados na primeira execução):
+
+| E-mail | Senha | Perfil |
+|---|---|---|
+| `admin@moedax.local` | `admin123` | administrador |
+| `investidor@moedax.local` | `invest123` | investidor |
+
+- **401**: sem credenciais ou inválidas (`WWW-Authenticate: Basic`)
+- **403**: autenticado, mas sem permissão de perfil
+
+## 2. Mercado (público)
+
+### 2.1 Listar cotações ao vivo
 
 `GET /api/assets`
 
-Retorna os ativos disponíveis no mercado, o valor atualizado e a variação recente.
-
-Exemplo de resposta:
-
-```json
-{
-  "success": true,
-  "updated_at": "2026-11-23T15:00:00.000Z",
-  "assets": [
-    {
-      "symbol": "BTC",
-      "name": "Bitcoin",
-      "type": "crypto",
-      "price": "R$ 621.480,20",
-      "change": "+3,84%",
-      "direction": "up",
-      "icon": "₿",
-      "color": "btc",
-      "points": "M0,23 C12,24 20,10 31,17"
-    }
-  ]
-}
-```
-
-Os ativos suportados são `BTC`, `ETH`, `USD` e `EUR`.
-
-O servidor tenta consultar APIs externas. Se o serviço estiver indisponível, retorna os dados locais de fallback armazenados em `backend/server.js`.
-
-### 2.2 Consultar histórico
+### 2.2 Histórico
 
 `GET /api/history?symbol={ativo}&period={periodo}`
 
-Parâmetros:
+- `symbol` obrigatório (ativos ativos no banco)
+- Inválido → `400`
 
-| Parâmetro | Obrigatório | Valores aceitos |
-|---|---:|---|
-| `symbol` | Sim | `BTC`, `ETH`, `USD`, `EUR` |
-| `period` | Não | Qualquer período; o servidor usa `24h` como padrão |
-
-Períodos utilizados pela interface:
-
-| Período | Comportamento |
-|---|---|
-| `1h` | Última hora |
-| `24h` | Últimas 24 horas |
-| `3d` | Últimos 3 dias |
-| `15d` | Últimos 15 dias |
-| `30d` | Últimos 30 dias |
-
-Exemplo:
-
-`GET /api/history?symbol=BTC&period=24h`
-
-Exemplo de resposta:
-
-```json
-{
-  "success": true,
-  "symbol": "BTC",
-  "period": "24h",
-  "history": [
-    {
-      "timestamp": 1763910000000,
-      "price": 621480.2
-    }
-  ]
-}
-```
-
-Resposta de ativo inválido:
-
-`HTTP 400`
-
-```json
-{
-  "error": "Ativo inválido"
-}
-```
-
-## 3. Configuração do Supabase
-
-### 3.1 Consultar configuração pública
+### 2.3 Config Supabase (legado frontend)
 
 `GET /api/supabase-config`
 
-Retorna as variáveis públicas necessárias ao frontend.
+### 2.4 Usuário autenticado
 
-Exemplo sem configuração:
+`GET /api/me` (Basic Auth)
 
-```json
-{
-  "url": "",
-  "anonKey": "",
-  "configured": false
-}
-```
+## 3. CRUD — Users (admin)
 
-Exemplo com configuração:
+| Método | Rota | Descrição |
+|---|---|---|
+| GET | `/api/users` | Listar |
+| GET | `/api/users/:id` | Buscar |
+| POST | `/api/users` | Criar |
+| PUT | `/api/users/:id` | Atualizar |
+| DELETE | `/api/users/:id` | Remover |
 
-```json
-{
-  "url": "https://exemplo.supabase.co",
-  "anonKey": "chave-publica-anonima",
-  "configured": true
-}
-```
-
-A chave `anonKey` é destinada ao uso público no navegador. Não adicionar a chave de serviço do Supabase ou outras credenciais privadas nesta resposta.
-
-Quando executado pelo Node.js, o servidor também sincroniza a configuração em `frontend/supabase-config.json`, desde que `SUPABASE_URL` e `SUPABASE_ANON_KEY` estejam definidas no arquivo `.env`.
-
-## 4. Arquivos estáticos
-
-O servidor entrega os arquivos da pasta `frontend/` em rotas correspondentes ao caminho solicitado.
-
-Exemplo:
-
-- `GET /login.html`
-- `GET /cadastro.html`
-- `GET /index.html`
-- `GET /mercado.html`
-- `GET /alertas.html`
-- `GET /historico.html`
-
-Respostas:
-
-- Arquivo existente: `HTTP 200`
-- Arquivo inexistente: `HTTP 404`
-- Tentativa de sair da pasta pública: `HTTP 403`
-- Métodos diferentes de `GET` em arquivos estáticos: `HTTP 405`
-
-Exemplo de erro:
+Body POST:
 
 ```json
 {
-  "error": "Arquivo não encontrado"
+  "email": "novo@moedax.local",
+  "password": "senha123",
+  "full_name": "Novo Usuário",
+  "role": "investidor"
 }
 ```
 
-## 5. Autenticação
+Regras:
 
-O backend Node.js não implementa login, cadastro ou controle de sessão.
+- e-mail duplicado → `409`
+- senha com menos de 6 caracteres → `400`
+- investidor acessando → `403`
+- admin não remove a própria conta → `409`
 
-Essas operações são realizadas diretamente pelo navegador por meio do Supabase Auth. Os arquivos envolvidos são:
+## 4. CRUD — Catálogo de ativos (persistido)
 
-- `frontend/javascript/supabase-client.js`
-- `frontend/javascript/session-user.js`
-- `frontend/javascript/auth-guard.js`
-- `frontend/javascript/cadastro.js`
-- `frontend/javascript/login.js`
-- `frontend-angular/src/app/services/auth.service.ts`
+| Método | Rota | Auth |
+|---|---|---|
+| GET | `/api/catalog/assets` | autenticado |
+| GET | `/api/catalog/assets/:id` | autenticado |
+| POST | `/api/catalog/assets` | admin |
+| PUT | `/api/catalog/assets/:id` | admin |
+| DELETE | `/api/catalog/assets/:id` | admin |
 
-O projeto utiliza o endpoint `/api/supabase-config` para obter a URL e a chave pública do Supabase.
+Body POST:
 
-## 6. Códigos HTTP observáveis no backend Node.js
+```json
+{
+  "symbol": "SOL",
+  "name": "Solana",
+  "type": "crypto",
+  "icon": "◎",
+  "color": "sol"
+}
+```
+
+Símbolo duplicado → `409`.
+
+> Nota: `GET /api/assets` continua público e retorna cotações formatadas para o frontend. O CRUD persistido usa `/api/catalog/assets`.
+
+## 5. CRUD — Quotes (cotações)
+
+| Método | Rota | Auth |
+|---|---|---|
+| GET | `/api/quotes` | autenticado |
+| GET | `/api/quotes/:id` | autenticado |
+| POST | `/api/quotes` | autenticado |
+| PUT | `/api/quotes/:id` | admin |
+| DELETE | `/api/quotes/:id` | admin |
+
+Body POST:
+
+```json
+{
+  "asset_id": 1,
+  "price": 630000.5,
+  "change_percent": 1.25
+}
+```
+
+Cotação em ativo inativo → `409`.
+
+## 6. CRUD — Alerts
+
+| Método | Rota | Auth |
+|---|---|---|
+| GET | `/api/alerts` | autenticado (próprios; admin vê todos) |
+| GET | `/api/alerts/:id` | autenticado + dono/admin |
+| POST | `/api/alerts` | autenticado |
+| PUT | `/api/alerts/:id` | autenticado + dono/admin |
+| DELETE | `/api/alerts/:id` | autenticado + dono/admin |
+
+Body POST:
+
+```json
+{
+  "asset_id": 1,
+  "target_price": 650000,
+  "condition": "above"
+}
+```
+
+Regras:
+
+- alerta idêntico ativo → `409`
+- ativo inativo → `409`
+- acessar alerta de outro usuário → `403`
+
+## 7. CRUD — Watchlist (favoritos)
+
+| Método | Rota | Auth |
+|---|---|---|
+| GET | `/api/watchlist` | autenticado |
+| GET | `/api/watchlist/:id` | autenticado + dono/admin |
+| POST | `/api/watchlist` | autenticado |
+| PUT | `/api/watchlist/:id` | autenticado + dono/admin |
+| DELETE | `/api/watchlist/:id` | autenticado + dono/admin |
+
+Body POST:
+
+```json
+{
+  "asset_id": 3,
+  "notes": "Observar câmbio"
+}
+```
+
+Ativo já favoritado pelo usuário → `409`.
+
+## 8. Códigos HTTP
 
 | Código | Situação |
 |---|---|
-| 200 | Requisição processada ou arquivo encontrado |
-| 302 | Redirecionamento da raiz para `/login.html` |
-| 400 | Ativo inválido em `/api/history` |
-| 403 | Tentativa de acessar arquivo fora de `frontend/` |
-| 404 | Arquivo estático não encontrado |
-| 405 | Método não permitido para arquivo estático |
+| 200 | Sucesso |
+| 201 | Criado |
+| 204 | OPTIONS/CORS |
+| 302 | Redirect de páginas estáticas |
+| 400 | Validação de entrada |
+| 401 | Sem autenticação / credenciais inválidas |
+| 403 | Sem permissão de perfil ou ownership |
+| 404 | Recurso ou endpoint inexistente |
+| 405 | Método HTTP não permitido |
+| 409 | Conflito de negócio/unicidade |
+| 500 | Erro interno |
 
-## 7. Interface Angular
+## 9. Modelo de dados (5 entidades)
 
-A aplicação Angular utiliza a mesma API Node.js:
+1. `users`
+2. `assets`
+3. `quotes`
+4. `alerts`
+5. `watchlist_items`
 
-- `/api/assets`
-- `/api/history?symbol={ativo}&period=24h`
-- `/api/supabase-config`
+Relacionamentos e diagrama: ver `backend/docs/diagrama-dados.md`.
 
-Para executar:
+Schema SQL: `backend/db/schema.sql`.
 
-```text
-npm start
-npm run start:angular
-```
+## 10. Postman
 
-O servidor Node deve permanecer em execução na porta 3000. O Angular utiliza a porta 4200 e o proxy configurado em `frontend-angular/proxy.conf.json`.
-
-## 8. Artefato Spring Boot
-
-O projeto contém o artefato `backend-spring/target/moedax-api-1.0.0.jar`, mas não contém o código-fonte Spring, o `pom.xml` ou os arquivos de configuração completos nesse diretório.
-
-Portanto, os endpoints Spring não podem ser considerados confirmados e documentados nesta versão. Antes de publicar uma documentação específica do Spring, recuperar o código-fonte e executar o JAR localmente para validar:
-
-- porta configurada;
-- datasource MySQL;
-- endpoints e parâmetros;
-- autenticação;
-- regras de autorização;
-- códigos HTTP;
-- exemplos de sucesso e erro.
-
-O relatório existente em `backend-spring/target/surefire-reports/` registra nove testes executados sem falhas ou erros. Esse resultado valida o artefato testado no ambiente utilizado pela geração do relatório, mas não substitui a validação atual do backend em execução.
-
-## 9. Executar e validar
-
-1. Na raiz do projeto, execute `npm install`.
-2. Configure o arquivo `.env` com `SUPABASE_URL` e `SUPABASE_ANON_KEY`, quando necessário.
+1. Abra o Postman.
+2. Import → `postman/MoedaX.postman_collection.json`.
 3. Execute `npm start`.
-4. Valide `http://localhost:3000/api/assets`.
-5. Valide `http://localhost:3000/api/history?symbol=BTC&period=24h`.
-6. Valide `http://localhost:3000/api/supabase-config`.
-7. Abra `http://localhost:3000/login.html`.
+4. Rode as pastas na ordem: Mercado → Autenticação → CRUDs.
+5. Ajuste variáveis `assetId`, `alertId`, etc. conforme IDs retornados.
+
+## 11. Interface Angular / frontend legado
+
+O frontend continua usando:
+
+- `GET /api/assets`
+- `GET /api/history`
+- `GET /api/supabase-config`
+
+Essas rotas permanecem públicas para não quebrar o dashboard.

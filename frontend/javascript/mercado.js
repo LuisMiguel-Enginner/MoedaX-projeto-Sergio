@@ -31,13 +31,11 @@ function assetIcon(asset) {
 }
 
 async function loadAssets() {
-  for (const url of ['/api/assets', 'http://localhost:3000/api/assets']) {
-    try {
-      const response = await fetch(url);
-      const data = await response.json();
-      if (data.assets?.length) return data.assets;
-    } catch { /* usa os valores locais quando a API estiver indisponível */ }
-  }
+  try {
+    const response = await fetch('/api/assets');
+    const data = await response.json();
+    if (data.assets?.length) return data.assets;
+  } catch { /* usa os valores locais quando a API estiver indisponível */ }
   return fallbackAssets;
 }
 

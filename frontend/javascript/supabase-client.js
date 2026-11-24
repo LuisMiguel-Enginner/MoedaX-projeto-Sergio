@@ -56,7 +56,7 @@ export function mapAuthError(message) {
     return 'O serviço de e-mail atingiu o limite temporário de envios. Aguarde alguns minutos ou desative a confirmação de e-mail no Supabase para testes da conta demo.';
   }
   if (text.includes('failed to fetch') || text.includes('networkerror')) {
-    return 'Não foi possível conectar ao serviço de autenticação. Verifique se o servidor Node está rodando.';
+    return 'Não foi possível conectar ao serviço de autenticação. Verifique a configuração do Supabase e a URL do projeto.';
   }
   if (text.includes('signup is disabled')) {
     return 'O cadastro de novos usuários está desativado nas configurações do Supabase.';

@@ -9,9 +9,10 @@
     "build:angular": "npm --prefix frontend-angular run build"
   },
   "dependencies": {
+    "better-sqlite3": "^13.2.0",
     "dotenv": "^16.4.7"
   },
   "engines": {
-    "node": ">=18"
+    "node": "20.x"
   }
 }

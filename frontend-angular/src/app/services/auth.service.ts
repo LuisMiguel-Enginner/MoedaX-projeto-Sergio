@@ -24,7 +24,7 @@ export class AuthService {
     return this.clientPromise;
   }
 
-  async getCurrentUser(): Promise<CurrentUser> {
+  async getCurrentUser(): Promise<CurrentUser | null> {
     try {
       const client = await this.getClient();
       const { data, error } = await client.auth.getSession();
@@ -33,7 +33,7 @@ export class AuthService {
       }
       const session = data.session;
       if (!session) {
-        return this.demoUser();
+        return null;
       }
 
       let profile: { full_name: string; account_type: string } | null = null;
@@ -62,8 +62,8 @@ export class AuthService {
         accountType === 'administrador' ? 'Administrador' : 'Conta pessoal',
       );
     } catch (error) {
-      console.warn('Autenticação indisponível; usando a conta demo local.', error);
-      return this.demoUser();
+      console.warn('Autenticação indisponível.', error);
+      return null;
     }
   }
 
@@ -122,13 +122,17 @@ export class AuthService {
   }
 
   async signOut(): Promise<void> {
-    const client = await this.getClient();
-    const { error } = await client.auth.signOut();
-    if (error) {
-      throw error;
+    try {
+      const client = await this.getClient();
+      const { error } = await client.auth.signOut();
+      if (error) {
+        throw error;
+      }
+    } finally {
+      localStorage.removeItem('moedax_demo_mode');
+      localStorage.removeItem('moedax_demo_name');
+      localStorage.removeItem('moedax_demo_email');
     }
-    localStorage.removeItem('moedax_demo_name');
-    localStorage.removeItem('moedax_demo_email');
   }
 
   mapError(error: unknown): string {
@@ -144,7 +148,7 @@ export class AuthService {
       return 'O serviço de e-mail atingiu o limite temporário de envios. Aguarde alguns minutos e tente novamente.';
     }
     if (text.includes('failed to fetch') || text.includes('networkerror')) {
-      return 'Não foi possível conectar. Confirme se o backend está rodando e se a configuração do Supabase está disponível.';
+      return 'Não foi possível conectar ao serviço de autenticação. Verifique a configuração do Supabase.';
     }
     if (text.includes('signup is disabled')) {
       return 'O cadastro de novos usuários está desativado nas configurações do Supabase.';
@@ -173,7 +177,7 @@ export class AuthService {
   }
 
   private async loadConfig(): Promise<SupabaseConfig> {
-    const paths = ['/api/supabase-config', '../frontend/supabase-config.json', '/frontend/supabase-config.json'];
+    const paths = ['/api/supabase-config', '/supabase-config.json'];
     for (const path of paths) {
       try {
         const response = await fetch(path);
@@ -188,17 +192,7 @@ export class AuthService {
         continue;
       }
     }
-    throw new Error('Supabase não configurado. Inicie o backend e configure SUPABASE_URL/SUPABASE_ANON_KEY.');
-  }
-
-  private demoUser(): CurrentUser {
-    const fullName = (localStorage.getItem('moedax_demo_name') || 'Usuário Demo').trim() || 'Usuário Demo';
-    return this.toUser(
-      'demo-user-1',
-      localStorage.getItem('moedax_demo_email') || 'demo@moedax.test',
-      fullName,
-      'Conta pessoal',
-    );
+    throw new Error('Supabase não configurado. Defina SUPABASE_URL/SUPABASE_ANON_KEY ou frontend/supabase-config.json.');
   }
 
   private toUser(id: string, email: string, fullName: string, accountLabel: string): CurrentUser {

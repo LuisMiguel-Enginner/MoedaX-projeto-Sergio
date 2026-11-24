@@ -45,7 +45,12 @@ export class DashboardComponent implements OnInit {
   selectedYieldSymbol = 'BTC';
 
   async ngOnInit(): Promise<void> {
-    this.user = await this.auth.getCurrentUser();
+    const user = await this.auth.getCurrentUser();
+    if (!user) {
+      await this.router.navigateByUrl('/login');
+      return;
+    }
+    this.user = user;
     this.account = this.data.getAccount(this.user.id);
     await this.loadDashboard();
   }

@@ -78,28 +78,24 @@ function getUserFavoriteSymbols(userId, assets) {
 }
 
 async function fetchMarketAssets() {
-  const apiUrls = ['/api/assets', 'http://localhost:3000/api/assets'];
-  for (const apiUrl of apiUrls) {
-    try {
-      const response = await fetch(apiUrl);
-      if (!response.ok) continue;
+  try {
+    const response = await fetch('/api/assets');
+    if (response.ok) {
       const data = await response.json();
       if (data.assets?.length) return data.assets;
-    } catch {
     }
+  } catch {
   }
   return FALLBACK_MARKET_ASSETS;
 }
 
 async function fetchAssetHistories(assets) {
   const results = await Promise.all(assets.map(async (asset) => {
-    for (const url of [`/api/history?symbol=${asset.symbol}&period=24h`, `http://localhost:3000/api/history?symbol=${asset.symbol}&period=24h`]) {
-      try {
-        const response = await fetch(url);
-        const data = await response.json();
-        if (data.history?.length) return [asset.symbol, data.history];
-      } catch { /* mantém a curva de fallback */ }
-    }
+    try {
+      const response = await fetch(`/api/history?symbol=${asset.symbol}&period=24h`);
+      const data = await response.json();
+      if (data.history?.length) return [asset.symbol, data.history];
+    } catch { /* mantém a curva de fallback */ }
     return [asset.symbol, []];
   }));
   assetHistories = Object.fromEntries(results);
@@ -449,11 +445,6 @@ function bindSidebar() {
 
 export async function initDashboard() {
   const user = await getCurrentUser();
-  if (!user) {
-    window.location.replace('login.html');
-    return;
-  }
-
   applyUserToPage(user);
   updateDateTime();
   setInterval(updateDateTime, 30_000);

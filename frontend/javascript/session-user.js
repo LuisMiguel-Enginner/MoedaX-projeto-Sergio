@@ -11,20 +11,6 @@ function accountLabel(type) {
   return type === 'administrador' ? 'Administrador' : 'Conta pessoal';
 }
 
-function getDemoUser() {
-  const fallbackName = 'Usuário Demo';
-  const name = (localStorage.getItem('moedax_demo_name') || fallbackName).trim() || fallbackName;
-  return {
-    id: 'demo-user-1',
-    email: localStorage.getItem('moedax_demo_email') || 'demo@moedax.test',
-    fullName: name,
-    firstName: name.split(/\s+/)[0],
-    initials: getInitials(name),
-    accountType: 'investidor',
-    accountLabel: 'Conta pessoal',
-  };
-}
-
 export async function getCurrentUser() {
   try {
     const supabase = await getSupabase();
@@ -32,7 +18,7 @@ export async function getCurrentUser() {
     const session = sessionData?.session;
 
     if (sessionError || !session) {
-      return getDemoUser();
+      return null;
     }
 
     let profile = null;
@@ -60,10 +46,10 @@ export async function getCurrentUser() {
       firstName: fullName.split(/\s+/)[0],
       initials: getInitials(fullName),
       accountType,
-      accountLabel: accountLabel(accountType),
+      accountLabel: accountLabel(accountType)
     };
   } catch {
-    return getDemoUser();
+    return null;
   }
 }
 
@@ -73,6 +59,7 @@ export async function signOut() {
     await supabase.auth.signOut();
   } catch {
   }
+  localStorage.removeItem('moedax_demo_mode');
   localStorage.removeItem('moedax_demo_name');
   localStorage.removeItem('moedax_demo_email');
   window.location.replace('login.html');

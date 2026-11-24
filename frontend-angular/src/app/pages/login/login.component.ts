@@ -58,6 +58,7 @@ export class LoginComponent implements OnInit {
     const { email, password, remember } = this.form.getRawValue();
     try {
       await this.auth.signIn(email.trim(), password);
+      localStorage.removeItem('moedax_demo_mode');
       if (remember) {
         localStorage.setItem('moedax_remember_email', email.trim());
       } else {
