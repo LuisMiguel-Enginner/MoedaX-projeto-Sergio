@@ -3,5 +3,7 @@ node_modules/
 backend/db/moedax.db
 backend/db/moedax.db-*
 backend/db/moedax.json
+frontend/_server/db/moedax.db
+frontend/_server/db/moedax.json
 public/
 .vercel

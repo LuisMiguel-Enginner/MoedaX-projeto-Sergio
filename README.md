@@ -42,26 +42,25 @@ Plataforma de comparação e monitoramento de moedas e criptomoedas.
 
 O projeto está preparado para a Vercel servir o `frontend/` e a API (`/api/*`) juntos.
 
-1. Conecte o repositório GitHub na Vercel (root do projeto).
-2. Em **Settings → Environment Variables**, defina (recomendado):
+### Configuração obrigatória na Vercel
+
+1. **Settings → General → Root Directory**: use `frontend` (recomendado para este projeto) **ou** deixe vazio (raiz do repositório).
+2. **Settings → Environment Variables** (recomendado):
    - `SUPABASE_URL`
    - `SUPABASE_ANON_KEY`
-3. No Supabase → **Authentication → URL Configuration**, adicione a URL do deploy:
-   - Site URL: `https://SEU-PROJETO.vercel.app`
-   - Redirect URLs:
-     - `https://SEU-PROJETO.vercel.app/login.html`
-     - `https://SEU-PROJETO.vercel.app/index.html`
-     - `https://SEU-PROJETO.vercel.app/**`
-4. Faça o deploy (`git push` ou Deploy na Vercel).
+3. No Supabase → **Authentication → URL Configuration**:
+   - Site URL: `https://moeda-x.vercel.app` (ou a URL do seu deploy)
+   - Redirect URLs: `https://moeda-x.vercel.app/**`
+4. Confirme que o projeto Supabase está **ativo** (não pausado). Se o console mostrar `ERR_NAME_NOT_RESOLVED`, o projeto Supabase foi removido ou pausado — restaure ou crie outro e atualize `frontend/supabase-config.json`.
 
-Telas disponíveis no deploy:
+Telas no deploy:
 
 - Login: `/login.html`
 - Cadastro: `/cadastro.html`
 - Dashboard: `/` ou `/index.html`
 - Mercado / Alertas / Histórico: `/mercado.html`, `/alertas.html`, `/historico.html`
 
-Sem sessão válida, o dashboard redireciona para o login. A API de cotações e o CRUD autenticado respondem em `/api/...`.
+Sem sessão válida, o dashboard redireciona para o login. A API responde em `/api/...`.
 
 ## Executar localmente
 
