@@ -44,7 +44,8 @@ Plataforma de comparação e monitoramento de moedas e criptomoedas.
 
 - Login: `/login.html`
 - Cadastro: `/cadastro.html`
-- Dashboard: `/` ou `/index.html`
+- Entrada do sistema: `/` ou `/login.html` (redireciona para login)
+- Dashboard: `/index.html` (exige autenticação)
 - Mercado / Alertas / Histórico
 
 Autenticação do site usa `POST /api/auth/login` e `POST /api/auth/register` (JWT).  
