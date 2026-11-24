@@ -1,4 +1,4 @@
-import { getSupabase, mapAuthError, showMessage, hideMessage } from './supabase-client.js';
+import { api, setToken, mapAuthError, showMessage, hideMessage, getToken } from './auth-api.js';
 
 const form = document.querySelector('#registerForm');
 const messageEl = document.querySelector('#authMessage');
@@ -30,7 +30,7 @@ function getPasswordRequirements(password) {
     length: password.length >= 8,
     uppercase: /[A-Z]/.test(password),
     number: /\d/.test(password),
-    special: /[^A-Za-z0-9]/.test(password),
+    special: /[^A-Za-z0-9]/.test(password)
   };
 }
 
@@ -49,53 +49,41 @@ async function handleRegister(event) {
   const fullName = document.querySelector('#fullName').value.trim();
   const email = document.querySelector('#email').value.trim();
   const password = document.querySelector('#password').value;
-  const confirmPassword = document.querySelector('#confirmPassword').value;
+  const confirmPassword = document.querySelector('#confirmPassword')?.value || '';
   const accountType = getAccountType();
 
-  if (!fullName || !email || !password || !confirmPassword) {
-    showMessage(messageEl, 'error', 'Preencha todos os campos.');
-    return;
-  }
-  if (!updatePasswordRequirements(password)) {
-    showMessage(messageEl, 'error', 'A senha deve ter 8 caracteres, uma letra maiúscula, um número e um caractere especial.');
+  if (!fullName || !email || !password) {
+    showMessage(messageEl, 'error', 'Preencha todos os campos obrigatórios.');
     return;
   }
   if (password !== confirmPassword) {
     showMessage(messageEl, 'error', 'As senhas não coincidem.');
     return;
   }
+  if (!updatePasswordRequirements(password)) {
+    showMessage(messageEl, 'error', 'A senha não atende aos requisitos mínimos.');
+    return;
+  }
 
   submitBtn.disabled = true;
-  submitBtn.querySelector('span').textContent = 'Cadastrando…';
+  submitBtn.querySelector('span').textContent = 'Cadastrando...';
 
   try {
-    const supabase = await getSupabase();
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: new URL('login.html', window.location.href).href,
-        data: {
-          full_name: fullName,
-          account_type: accountType,
-        },
-      },
+    await api('/api/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({
+        email,
+        password,
+        full_name: fullName,
+        role: accountType === 'administrador' ? 'administrador' : 'investidor'
+      })
     });
-    if (error) throw error;
-
-    if (!data.user?.identities?.length) {
-      showMessage(messageEl, 'error', 'Este e-mail já está cadastrado. Faça login ou recupere sua senha.');
-      return;
-    }
-
-    if (data.session) await supabase.auth.signOut();
+    setToken(null);
     showMessage(messageEl, 'success', 'Cadastro realizado com sucesso! Redirecionando para o login...');
     form.reset();
     document.querySelectorAll('[data-requirement]').forEach((item) => item.classList.remove('valid'));
-    window.setTimeout(() => window.location.replace('login.html'), 2200);
-    return;
+    window.setTimeout(() => window.location.replace('login.html'), 1600);
   } catch (err) {
-    console.error('Erro ao cadastrar usuário:', err);
     showMessage(messageEl, 'error', mapAuthError(err.message));
   } finally {
     submitBtn.disabled = false;
@@ -104,15 +92,16 @@ async function handleRegister(event) {
 }
 
 async function redirectIfLoggedIn() {
+  if (!getToken()) return;
   try {
-    const supabase = await getSupabase();
-    const { data } = await supabase.auth.getSession();
-    if (data.session) window.location.href = 'index.html';
+    await api('/api/auth/me');
+    window.location.href = 'index.html';
   } catch {
+    setToken(null);
   }
 }
 
-form.addEventListener('submit', handleRegister);
+form?.addEventListener('submit', handleRegister);
 document.querySelector('#password')?.addEventListener('input', (event) => updatePasswordRequirements(event.target.value));
 initPasswordToggles();
 window.lucide?.createIcons();

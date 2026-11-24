@@ -1,0 +1,19 @@
+name = "moedax"
+main = "worker/src/index.js"
+compatibility_date = "2024-11-12"
+workers_dev = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "moedax"
+database_id = "da3a4a95-8710-4ec3-a5d6-699fed9d2fcf"
+migrations_dir = "migrations"
+
+[assets]
+directory = "./frontend"
+binding = "ASSETS"
+run_worker_first = ["/api/*"]
+
+[vars]
+APP_NAME = "MoedaX"
+JWT_SECRET = "moedax-cloudflare-dev-secret-change-me"

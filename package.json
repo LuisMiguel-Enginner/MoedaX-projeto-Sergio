@@ -6,6 +6,11 @@
   "scripts": {
     "start": "node backend/server.js",
     "vercel-build": "node scripts/vercel-build.js",
+    "cf:login": "npx --yes wrangler@4 login",
+    "cf:migrate": "npx --yes wrangler@4 d1 migrations apply moedax --remote",
+    "cf:migrate:local": "npx --yes wrangler@4 d1 migrations apply moedax --local",
+    "cf:dev": "npx --yes wrangler@4 dev",
+    "cf:deploy": "npx --yes wrangler@4 deploy",
     "start:angular": "npm --prefix frontend-angular start",
     "build:angular": "npm --prefix frontend-angular run build"
   },
@@ -14,6 +19,6 @@
     "dotenv": "^16.4.7"
   },
   "engines": {
-    "node": "20.x"
+    "node": ">=18"
   }
 }

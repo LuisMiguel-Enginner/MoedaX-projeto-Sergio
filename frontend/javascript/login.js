@@ -1,4 +1,4 @@
-﻿import { getSupabase, mapAuthError, showMessage, hideMessage } from './supabase-client.js';
+﻿import { api, setToken, mapAuthError, showMessage, hideMessage, getToken } from './auth-api.js';
 
 const form = document.querySelector('#loginForm');
 const messageEl = document.querySelector('#authMessage');
@@ -29,17 +29,17 @@ async function handleLogin(event) {
   }
 
   submitBtn.disabled = true;
-  submitBtn.querySelector('span').textContent = 'EntrandoÔÇª';
+  submitBtn.querySelector('span').textContent = 'Entrando...';
 
   try {
-    const supabase = await getSupabase();
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
-
+    const data = await api('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password })
+    });
+    setToken(data.token);
     localStorage.removeItem('moedax_demo_mode');
     if (remember) localStorage.setItem(rememberKey, email);
     else localStorage.removeItem(rememberKey);
-
     window.location.href = 'index.html';
   } catch (err) {
     showMessage(messageEl, 'error', mapAuthError(err.message));
@@ -49,63 +49,25 @@ async function handleLogin(event) {
   }
 }
 
-async function handleGoogleLogin() {
-  hideMessage(messageEl);
-  try {
-    const supabase = await getSupabase();
-    const redirectTo = new URL('index.html', window.location.href).href;
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo }
-    });
-    if (error) throw error;
-  } catch (err) {
-    showMessage(messageEl, 'error', mapAuthError(err.message));
-  }
-}
-
-async function handleForgotPassword(event) {
-  event.preventDefault();
-  hideMessage(messageEl);
-  const email = document.querySelector('#email').value.trim();
-  if (!email) {
-    showMessage(messageEl, 'error', 'Informe seu e-mail no campo acima para receber o link de recuperação.');
-    return;
-  }
-  try {
-    const supabase = await getSupabase();
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: new URL('login.html', window.location.href).href
-    });
-    if (error) throw error;
-    showMessage(messageEl, 'success', 'Enviamos um link de recuperação para o seu e-mail.');
-  } catch (err) {
-    showMessage(messageEl, 'error', mapAuthError(err.message));
-  }
-}
-
 async function redirectIfLoggedIn() {
+  if (!getToken()) return;
   try {
-    const supabase = await getSupabase();
-    const { data } = await supabase.auth.getSession();
-    if (data.session) window.location.href = 'index.html';
+    await api('/api/auth/me');
+    window.location.href = 'index.html';
   } catch {
+    setToken(null);
   }
-}
-
-function showRedirectError() {
-  const params = new URLSearchParams(`${window.location.search}${window.location.hash.replace(/^#/, '&')}`);
-  const error = params.get('error_description') || params.get('error_code');
-  if (!error) return;
-  showMessage(messageEl, 'error', mapAuthError(decodeURIComponent(error.replace(/\+/g, ' '))));
-  window.history.replaceState({}, document.title, window.location.pathname);
 }
 
 form?.addEventListener('submit', handleLogin);
-document.querySelector('#googleLogin')?.addEventListener('click', handleGoogleLogin);
-document.querySelector('#forgotPassword')?.addEventListener('click', handleForgotPassword);
+document.querySelector('#googleLogin')?.addEventListener('click', () => {
+  showMessage(messageEl, 'error', 'Login social desativado. Use e-mail e senha da API Cloudflare.');
+});
+document.querySelector('#forgotPassword')?.addEventListener('click', (event) => {
+  event.preventDefault();
+  showMessage(messageEl, 'error', 'Recuperação de senha via e-mail foi substituída. Peça ao admin para redefinir.');
+});
 
 restoreRememberedEmail();
 window.lucide?.createIcons();
-showRedirectError();
 redirectIfLoggedIn();

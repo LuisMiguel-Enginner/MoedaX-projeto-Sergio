@@ -1,4 +1,4 @@
-import { getSupabase } from './supabase-client.js';
+import { api, setToken } from './auth-api.js';
 
 function getInitials(name) {
   const parts = (name || '').trim().split(/\s+/).filter(Boolean);
@@ -7,46 +7,19 @@ function getInitials(name) {
   return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
 }
 
-function accountLabel(type) {
-  return type === 'administrador' ? 'Administrador' : 'Conta pessoal';
-}
-
 export async function getCurrentUser() {
   try {
-    const supabase = await getSupabase();
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-    const session = sessionData?.session;
-
-    if (sessionError || !session) {
-      return null;
-    }
-
-    let profile = null;
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('full_name, account_type')
-        .eq('id', session.user.id)
-        .maybeSingle();
-
-      if (!error) {
-        profile = data;
-      }
-    } catch {
-    }
-
-    const meta = session.user.user_metadata || {};
-    const fullName = (profile?.full_name || meta.full_name || session.user.email?.split('@')[0] || 'Usuário').trim();
-    const accountType = profile?.account_type || meta.account_type || 'investidor';
-
+    const data = await api('/api/auth/me');
+    const user = data.user;
+    const fullName = user.fullName || user.full_name || 'Usuário';
     return {
-      id: session.user.id,
-      email: session.user.email,
+      id: user.id,
+      email: user.email,
       fullName,
-      firstName: fullName.split(/\s+/)[0],
+      firstName: user.firstName || fullName.split(/\s+/)[0],
       initials: getInitials(fullName),
-      accountType,
-      accountLabel: accountLabel(accountType)
+      accountType: user.accountType || user.role || 'investidor',
+      accountLabel: user.accountLabel || (user.role === 'administrador' ? 'Administrador' : 'Conta pessoal')
     };
   } catch {
     return null;
@@ -54,11 +27,7 @@ export async function getCurrentUser() {
 }
 
 export async function signOut() {
-  try {
-    const supabase = await getSupabase();
-    await supabase.auth.signOut();
-  } catch {
-  }
+  setToken(null);
   localStorage.removeItem('moedax_demo_mode');
   localStorage.removeItem('moedax_demo_name');
   localStorage.removeItem('moedax_demo_email');

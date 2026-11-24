@@ -1,7 +1,4 @@
--- MoedaX — modelo relacional (SQLite)
--- 5 entidades: users, assets, quotes, alerts, watchlist_items
-
-PRAGMA foreign_keys = ON;
+-- MoedaX D1 schema (5 entidades)
 
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

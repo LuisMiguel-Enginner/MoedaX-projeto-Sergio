@@ -1,14 +1,19 @@
-import { getCurrentUser } from './session-user.js';
+import { api, getToken, setToken } from './auth-api.js';
 
 const LOGIN_PATH = 'login.html';
 
 export async function requireAuth() {
-  try {
-    const user = await getCurrentUser();
-    if (user) return user;
-  } catch {
+  if (!getToken()) {
+    window.location.replace(LOGIN_PATH);
+    return new Promise(() => {});
   }
 
-  window.location.replace(LOGIN_PATH);
-  return new Promise(() => {});
+  try {
+    const data = await api('/api/auth/me');
+    return data.user;
+  } catch {
+    setToken(null);
+    window.location.replace(LOGIN_PATH);
+    return new Promise(() => {});
+  }
 }

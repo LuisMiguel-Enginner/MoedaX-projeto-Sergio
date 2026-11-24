@@ -1,8 +1,4 @@
-const { AppError } = require('../exceptions/AppError');
-const assetRepository = require('../repositories/assetRepository');
-const quoteRepository = require('../repositories/quoteRepository');
-
-const FALLBACK_META = {
+const FALLBACK = {
   BTC: { points: 'M0,23 C12,24 20,10 31,17 S50,7 62,14 S79,4 94,2', price: 621480.2, change: 3.84 },
   ETH: { points: 'M0,25 C15,21 19,22 30,14 S48,18 59,10 S76,12 94,3', price: 18942.7, change: 2.19 },
   USD: { points: 'M0,5 C14,7 21,4 32,13 S48,8 60,16 S78,11 94,25', price: 5.2841, change: -0.42 },
@@ -10,7 +6,6 @@ const FALLBACK_META = {
 };
 
 const cryptoIds = { BTC: 'bitcoin', ETH: 'ethereum' };
-let marketCache = { assets: null, updatedAt: 0 };
 
 function formatBRL(value, decimals = 2) {
   return Number(value).toLocaleString('pt-BR', {
@@ -29,7 +24,7 @@ function formatPercent(value) {
   })}%`;
 }
 
-function buildMarketAsset(asset, price, changePercent) {
+function buildAsset(asset, price, changePercent) {
   const decimals = asset.type === 'fiat' ? 4 : 2;
   return {
     id: asset.id,
@@ -41,36 +36,31 @@ function buildMarketAsset(asset, price, changePercent) {
     direction: Number(changePercent) >= 0 ? 'up' : 'down',
     icon: asset.icon,
     color: asset.color,
-    points: (FALLBACK_META[asset.symbol] || {}).points || 'M0,20 C30,10 60,25 94,12'
+    points: (FALLBACK[asset.symbol] || {}).points || 'M0,20 C30,10 60,25 94,12'
   };
 }
 
-function localMarketAssets() {
-  const assets = assetRepository.findAll({ activeOnly: true });
-  return assets.map((asset) => {
-    const latest = quoteRepository.findByAssetId(asset.id)[0];
-    const fallback = FALLBACK_META[asset.symbol] || { price: 1, change: 0 };
-    return buildMarketAsset(
-      asset,
-      latest ? latest.price : fallback.price,
-      latest ? latest.change_percent : fallback.change
-    );
-  });
+async function localAssets(db) {
+  const assets = await db.prepare('SELECT * FROM assets WHERE active = 1 ORDER BY id').all();
+  const rows = assets.results || [];
+  const result = [];
+  for (const asset of rows) {
+    const latest = await db.prepare('SELECT * FROM quotes WHERE asset_id = ? ORDER BY recorded_at DESC, id DESC LIMIT 1').bind(asset.id).first();
+    const fallback = FALLBACK[asset.symbol] || { price: 1, change: 0 };
+    result.push(buildAsset(asset, latest ? latest.price : fallback.price, latest ? latest.change_percent : fallback.change));
+  }
+  return result;
 }
 
-async function fetchLiveAssets() {
-  if (marketCache.assets && Date.now() - marketCache.updatedAt < 60_000) {
-    return marketCache.assets;
-  }
-
-  const dbAssets = assetRepository.findAll({ activeOnly: true });
+export async function fetchLiveAssets(db) {
+  const assets = await db.prepare('SELECT * FROM assets WHERE active = 1 ORDER BY id').all();
+  const rows = assets.results || [];
   try {
     const [cryptoResponse, ratesResponse] = await Promise.all([
       fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=brl&include_24hr_change=true'),
       fetch('https://open.er-api.com/v6/latest/BRL')
     ]);
     if (!cryptoResponse.ok || !ratesResponse.ok) throw new Error('Serviço de cotações indisponível');
-
     const crypto = await cryptoResponse.json();
     const rates = await ratesResponse.json();
     const liveMap = {
@@ -80,38 +70,31 @@ async function fetchLiveAssets() {
       EUR: { price: 1 / Number(rates.rates.EUR), change: 0 }
     };
 
-    const liveAssets = dbAssets.map((asset) => {
+    const liveAssets = [];
+    for (const asset of rows) {
       const live = liveMap[asset.symbol];
       if (live) {
-        quoteRepository.create({
-          asset_id: asset.id,
-          price: Number(live.price),
-          change_percent: Number(live.change) || 0
-        });
-        return buildMarketAsset(asset, live.price, live.change || 0);
+        await db.prepare('INSERT INTO quotes (asset_id, price, change_percent) VALUES (?, ?, ?)')
+          .bind(asset.id, Number(live.price), Number(live.change) || 0)
+          .run();
+        liveAssets.push(buildAsset(asset, live.price, live.change || 0));
+      } else {
+        const latest = await db.prepare('SELECT * FROM quotes WHERE asset_id = ? ORDER BY recorded_at DESC, id DESC LIMIT 1').bind(asset.id).first();
+        const fallback = FALLBACK[asset.symbol] || { price: 1, change: 0 };
+        liveAssets.push(buildAsset(asset, latest ? latest.price : fallback.price, latest ? latest.change_percent : fallback.change));
       }
-      const latest = quoteRepository.findByAssetId(asset.id)[0];
-      const fallback = FALLBACK_META[asset.symbol] || { price: 1, change: 0 };
-      return buildMarketAsset(asset, latest ? latest.price : fallback.price, latest ? latest.change_percent : fallback.change);
-    });
-
-    marketCache = { assets: liveAssets, updatedAt: Date.now() };
+    }
     return liveAssets;
-  } catch (error) {
-    console.warn(`Cotações ao vivo indisponíveis: ${error.message}`);
-    const fallback = localMarketAssets();
-    marketCache = { assets: fallback, updatedAt: Date.now() };
-    return fallback;
+  } catch {
+    return localAssets(db);
   }
 }
 
-function fallbackHistory(asset, period) {
+function fallbackHistory(asset, period, latest) {
   const points = period === '1h' ? 12 : period === '24h' ? 24 : period === '3d' ? 36 : period === '15d' ? 45 : 60;
-  const meta = FALLBACK_META[asset.symbol] || { price: 1, change: 0 };
-  const latest = quoteRepository.findByAssetId(asset.id)[0];
+  const meta = FALLBACK[asset.symbol] || { price: 1, change: 0 };
   const current = latest ? latest.price : meta.price;
   const change = latest ? latest.change_percent : meta.change;
-
   return Array.from({ length: points }, (_, index) => {
     const progress = index / (points - 1);
     const wave = Math.sin(index * 1.7) * Math.abs(change || 0.4) * 0.12;
@@ -122,14 +105,16 @@ function fallbackHistory(asset, period) {
   });
 }
 
-async function fetchAssetHistory(symbol, period) {
+export async function fetchAssetHistory(db, symbol, period = '24h') {
   const normalized = String(symbol || '').toUpperCase();
-  const allowed = assetRepository.findAll({ activeOnly: true }).map((item) => item.symbol);
-  if (!allowed.includes(normalized)) {
-    throw new AppError(400, 'Ativo inválido');
+  const asset = await db.prepare('SELECT * FROM assets WHERE symbol = ? AND active = 1').bind(normalized).first();
+  if (!asset) {
+    const err = new Error('Ativo inválido');
+    err.status = 400;
+    throw err;
   }
 
-  const asset = assetRepository.findBySymbol(normalized);
+  const latest = await db.prepare('SELECT * FROM quotes WHERE asset_id = ? ORDER BY recorded_at DESC, id DESC LIMIT 1').bind(asset.id).first();
   const days = { '1h': 1, '24h': 1, '3d': 3, '15d': 15, '30d': 30 }[period] || 7;
 
   try {
@@ -140,9 +125,7 @@ async function fetchAssetHistory(symbol, period) {
       if (!response.ok) throw new Error('Histórico cripto indisponível');
       const data = await response.json();
       const cutoff = Date.now() - (period === '1h' ? 3_600_000 : period === '24h' ? 86_400_000 : days * 86_400_000);
-      return data.prices
-        .filter(([timestamp]) => timestamp >= cutoff)
-        .map(([timestamp, price]) => ({ timestamp, price }));
+      return data.prices.filter(([timestamp]) => timestamp >= cutoff).map(([timestamp, price]) => ({ timestamp, price }));
     }
 
     const end = new Date();
@@ -157,13 +140,7 @@ async function fetchAssetHistory(symbol, period) {
       timestamp: new Date(date).getTime(),
       price: 1 / Number(rates[normalized])
     }));
-  } catch (error) {
-    console.warn(`Histórico ${normalized}/${period} indisponível: ${error.message}`);
-    return fallbackHistory(asset, period);
+  } catch {
+    return fallbackHistory(asset, period, latest);
   }
 }
-
-module.exports = {
-  fetchLiveAssets,
-  fetchAssetHistory
-};
