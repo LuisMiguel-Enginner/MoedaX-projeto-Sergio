@@ -5,6 +5,7 @@
   "description": "Dashboard de comparação e monitoramento de moedas e criptomoedas.",
   "scripts": {
     "start": "node backend/server.js",
+    "vercel-build": "node scripts/vercel-build.js",
     "start:angular": "npm --prefix frontend-angular start",
     "build:angular": "npm --prefix frontend-angular run build"
   },

@@ -25,9 +25,10 @@ module.exports = async function handler(request, response) {
   try {
     await ensureReady();
 
-    // Garante pathname completo /api/... no ambiente serverless da Vercel
-    if (request.url && !request.url.startsWith('/api')) {
-      const suffix = request.url.startsWith('/') ? request.url : `/${request.url}`;
+    // Normaliza URL no catch-all da Vercel (/api/[...path])
+    const original = request.url || '/';
+    if (!original.startsWith('/api')) {
+      const suffix = original.startsWith('/') ? original : `/${original}`;
       request.url = `/api${suffix === '/' ? '' : suffix}`;
     }
 

@@ -1,27 +1,25 @@
 let supabaseClientPromise = null;
 
 async function loadSupabaseConfig() {
-  try {
-    const response = await fetch('/api/supabase-config');
-    if (response.ok) {
+  const candidates = [
+    new URL('../supabase-config.json', import.meta.url).href,
+    '/supabase-config.json',
+    '/api/supabase-config'
+  ];
+
+  for (const url of candidates) {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) continue;
       const config = await response.json();
       if (config.url && config.anonKey) return config;
+    } catch {
     }
-  } catch {
   }
 
-  const jsonUrl = new URL('../supabase-config.json', import.meta.url);
-  const response = await fetch(jsonUrl);
-  if (!response.ok) {
-    throw new Error(
-      'Supabase não configurado. Use npm start com .env ou crie frontend/supabase-config.json.'
-    );
-  }
-  const config = await response.json();
-  if (!config.url || !config.anonKey) {
-    throw new Error('supabase-config.json incompleto (url e anonKey).');
-  }
-  return config;
+  throw new Error(
+    'Supabase não configurado. Verifique frontend/supabase-config.json ou as variáveis SUPABASE_URL/SUPABASE_ANON_KEY.'
+  );
 }
 
 export async function getSupabase() {
